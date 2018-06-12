@@ -1,6 +1,7 @@
 package org.gosky.yysweekly
 
 import android.Manifest
+import android.content.DialogInterface
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -21,7 +22,11 @@ class MainActivity : AppCompatActivity() {
             "华为" to "com.netease.onmyoji.huawei",
             "应用宝" to "com.tencent.tmgp.yys.zqb",
             "魅族" to "com.netease.onmyoji.mz",
-            "vivo" to "com.netease.onmyoji.vivo")
+            "vivo" to "com.netease.onmyoji.vivo",
+            "uc" to "com.netease.onmyoji.uc",
+            "xiaomi" to "com.netease.onmyoji.mi",
+            "360" to "com.netease.onmyoji.qihoo"
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,34 +45,27 @@ class MainActivity : AppCompatActivity() {
             try {
                 val file = File(Environment.getExternalStorageDirectory().path + "/Android/data/")
                 val listFiles = file.listFiles()
-                var pair: Pair<String, String>? = null
-                loop@ for (listFile in listFiles) {
-                    val find = channelList.find {
-                        return@find if (listFile.name.contains(it.second)) {
-                            tv_content.text = "已找到${it.first}渠道~"
-                            true
-                        } else false
-                    }
+
+                val finds = channelList.filter { pair ->
+                    val find = listFiles.find { it.name.contains(pair.second) }
                     if (find != null) {
-                        pair = find
-                        break@loop
-                    }
+                        tv_content.text = tv_content.text.toString() + "已找到${pair.first}渠道~\n"
+                        true
+                    } else false
                 }
-                val cacheFile = File(file, "${pair?.second}/files/netease/onmyoji/")
-                val s = cacheFile.listFiles().find { it.name.contains("chat_") }?.name?.split("_")!![1]
-                tv_content.text = tv_content.text.toString() + "\nroleId = $s"
+
                 alert {
-                    title = "提示"
-                    message = "是否前往查看痒痒鼠数据周报?"
-                    negativeButton("取消",{
+                    title = "选择想要查看的渠道"
+                    items(finds, { dialog: DialogInterface, item: Pair<String, String>, index: Int ->
+                        run {
+                            showChannelChoose(file, item)
+                        }
+                    })
+                    negativeButton("取消", {
 
                     })
-                    positiveButton("ok",{
-                        val uri = Uri.parse("https://yxzs.163.com/yys/weekly/index.html?roleInfo=60__$s")
-                        val intent = Intent(Intent.ACTION_VIEW, uri)
-                        startActivity(intent)
-                    })
                 }.show()
+
 
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -77,5 +75,45 @@ class MainActivity : AppCompatActivity() {
         } else {
             toast("获取权限失败/(ㄒoㄒ)/~~")
         }
+    }
+
+    private fun showChannelChoose(file: File, pair: Pair<String, String>) {
+        val cacheFile = File(file, "${pair.second}/files/netease/onmyoji/")
+        val list = cacheFile.listFiles().filter { it.name.contains("chat_") }.map { it.name?.split("_")!![1] }
+        list.forEach {
+            tv_content.text = tv_content.text.toString() + "\nroleId = $it"
+        }
+        if (list.isNotEmpty()) {
+            alert {
+                title = "提示"
+                val toMutableList = list.toMutableList()
+                toMutableList.add(0, "找到${list.size}个role_id(可能是好友的,一般自己的会是第一个?),选择自己想看的吧~")
+                items(toMutableList, { dialog: DialogInterface, item: String, index: Int ->
+                    run {
+                        if (index > 0)
+                            showOpenDialog(item)
+                    }
+                })
+
+                negativeButton("取消", {
+
+                })
+            }.show()
+        }
+    }
+
+    private fun showOpenDialog(s: String) {
+        alert {
+            title = "提示"
+            message = "是否前往查看痒痒鼠数据周报?"
+            negativeButton("取消", {
+
+            })
+            positiveButton("ok", {
+                val uri = Uri.parse("https://yxzs.163.com/yys/weekly/index.html?roleInfo=60__$s")
+                val intent = Intent(Intent.ACTION_VIEW, uri)
+                startActivity(intent)
+            })
+        }.show()
     }
 }
