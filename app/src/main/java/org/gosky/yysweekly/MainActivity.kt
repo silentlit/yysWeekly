@@ -79,11 +79,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun showChannelChoose(file: File, pair: Pair<String, String>) {
         val cacheFile = File(file, "${pair.second}/files/netease/onmyoji/")
-        val list = cacheFile.listFiles().filter { it.name.contains("chat_") }.map { it.name?.split("_")!![1] }
-        list.forEach {
+        val find = cacheFile.listFiles().find { it.name.contains("chat_") }
+        val list = find?.listFiles()?.map { it.name }?.toMutableList()
+        list?.add(0,find?.name?.split("_")!![1])
+        list?.forEach {
             tv_content.text = tv_content.text.toString() + "\nroleId = $it"
         }
-        if (list.isNotEmpty()) {
+        if (list != null && list.isNotEmpty()) {
             alert {
                 title = "提示"
                 val toMutableList = list.toMutableList()
